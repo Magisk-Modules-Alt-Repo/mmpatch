@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+# Log in red and exit
+err() {
+	echo -e "\e[91m[!] $@\e[39m"
+	exit 1
+}
+
+# Log in white and continue
+dbg() {
+	echo -e "[*] $@"
+}
+
+# Show program usage
+usage() {
+	echo "Usage: `basename $0` <GIT-USERNAME>"
+}
+
+# Ensure user specified a username
+if [[ -z "$1" ]]
+then
+	usage
+	exit 1
+fi
+
+# Ensure Magisk Manager APK exists
+[[ ! -f "MagiskManager.apk" ]] && err "Missing MagiskManager.apk. Exiting."
+
+# Check for required dependencies
+for dep in apktool jarsigner sed
+do
+	! command -v "$dep" &> /dev/null && err "Unable to locate dependency $dep. Exiting."
+done
+
+# Decompile MagiskManager.apk
+dbg "Unpacking MagiskManager.apk"
+apktool d -f --no-res MagiskManager.apk
+
+# Replace existing repo with custom one
+dbg "Patching repo against $1"
+sed -i "s/Magisk-Modules-Repo/$1/" MagiskManager/smali/a/*
+
+# Recompile MagiskManager
+dbg "Repacking MagiskManager.apk"
+apktool b MagiskManager
+
+# Sign APK with test certificate
+dbg "Signing with official mmpatch keystore"
+jarsigner -keystore mmpatch.jks -storepass mmpatch -signedjar mmpatch-signed.apk MagiskManager/dist/MagiskManager.apk mmpatch
+
+# Done
+dbg "Done: mmpatch-signed.apk"
