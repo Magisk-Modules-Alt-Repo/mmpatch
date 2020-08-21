@@ -38,7 +38,7 @@ apktool d -f --no-res MagiskManager.apk
 
 # Replace existing repo with custom one
 dbg "Patching repo against $1"
-sed -i "s/Magisk-Modules-Repo/$1/" MagiskManager/smali/a/*
+find MagiskManager -type f -print0 | xargs -0 sed -i "s/Magisk-Modules-Repo/$1/"
 
 # Recompile MagiskManager
 dbg "Repacking MagiskManager.apk"
